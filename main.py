@@ -50,15 +50,15 @@ def findTreeTrunk(src_image):
 
 def main ():
     #ustalenie ścieżki do folderu z obrazami:
-    # paths_to_images = getImagePath('resources\\drzewa\\dab')
-    paths_to_images = getImagePath('resources\\drzewa\\sosna')
+    paths_to_images = getImagePath('resources\\drzewa\\dab')
+    # paths_to_images = getImagePath('resources\\drzewa\\sosna')
 
     #wczytywanie kolejnych obrazów
     for im_path in paths_to_images:
         image = cv.imread(im_path)
         image = cv.pyrDown(image)
         #wyświetlenie na konsolę postępu
-        print(f'Progress: {paths_to_images.index(im_path)}/{len(paths_to_images)}')
+        print(f'Progress: {paths_to_images.index(im_path)+1}/{len(paths_to_images)}')
         print(f'Acctual file: {im_path.split('\\')[-1]}')
         mask = findTreeTrunk(image) #maska
         #zastosowanie maski do oryginalnego obrazu
