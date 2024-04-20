@@ -10,6 +10,44 @@ def getImagePath(folder_directory):
             images_path.append(folder_directory + '\\' + images)
     return images_path
 
+def findTreeTrunk(src_image):
+    '''funkcja zwracająca obszar na którym znajduje się pień drzewa'''
+    image = src_image
+    #tworzenie maski dla metody grabCut 
+    mask = np.zeros(list(src_image.shape)[:-1], np.uint8)
+
+    #oznaczenie pionową linią - pewnego pierwszego planu
+    start_point =(src_image.shape[1]//2, 0)
+    end_point = (src_image.shape[1]//2, src_image.shape[0])
+    fg_color = 255
+    thickness = 5
+    cv.line(mask, start_point, end_point, fg_color, thickness)
+
+    #oznaczenie pionową linią - pewnego tła
+    thickness = 10
+    start_point_left = (0 + thickness//2, 0)
+    end_point_left = (0 + thickness//2, src_image.shape[0])
+    start_point_right = (src_image.shape[1] - (thickness//2), 0)
+    end_point_right= (src_image.shape[1] - (thickness//2), src_image.shape[0])
+    bg_color = 20
+    cv.line(mask, start_point_left, end_point_left, bg_color, thickness)
+    cv.line(mask, start_point_right, end_point_right, bg_color, thickness)
+
+    mask[mask == fg_color] = cv.GC_FGD #pixele, które na pewno zawierają pierwszy plan
+    mask[mask == bg_color] = cv.GC_BGD #pixele, które na pewno zawierają tło
+    mask[mask == 0] = cv.GC_PR_BGD #pixele, które mogą zawierać tło
+
+    #zastosowanie metody grabCut
+    fg_model = np.zeros((1, 65), np.float64) #model pierwszego planu -> wymagane dla metody
+    bg_model = np.zeros((1, 65), np.float64) #model tła -> wymagane dla metody
+    iterations = 30 #liczba iteracji algorytmu grab cat (Ten parametr trzaba lepiej określić)
+    mask, bg_model, fg_model = cv.grabCut(image, mask, None, bg_model, fg_model,
+        iterations, mode=cv.GC_INIT_WITH_MASK)
+    
+    #wizualizacjia otrzymanej maski
+    mask = np.where((mask==2)|(mask==0),0,1).astype('uint8')
+    return mask
+
 def main ():
     #ustalenie ścieżki do folderu z obrazami:
     paths_to_images = getImagePath('resources\\drzewa\\dab')
@@ -20,10 +58,16 @@ def main ():
         image = cv.imread(im_path)
         image = cv.pyrDown(image)
         print(f'Acctual file: {im_path.split('\\')[-1]}')
+        mask = findTreeTrunk(image)
+
+        #wyświetlenie obrazów
         cv.imshow('Oryginal Image', image)
+        cv.imshow('Mask', np.where(mask == 1, 255, 0).astype('uint8'))
+        tree_trunk_image = image*mask[:,:,np.newaxis]
+        cv.imshow('Tree trunk', tree_trunk_image)
 
         key = cv.waitKey(0)
-        if key == ord('q') or key == 27:
+        if key == ord('Q') or key == ord('q') or key == 27:
             exit()
 
 if __name__ == '__main__':
