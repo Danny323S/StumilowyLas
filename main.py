@@ -50,25 +50,37 @@ def findTreeTrunk(src_image):
 
 def main ():
     #ustalenie ścieżki do folderu z obrazami:
-    paths_to_images = getImagePath('resources\\drzewa\\dab')
-    # paths_to_images = load_image('resources\\drzewa\\sosna')
+    # paths_to_images = getImagePath('resources\\drzewa\\dab')
+    paths_to_images = getImagePath('resources\\drzewa\\sosna')
 
     #wczytywanie kolejnych obrazów
     for im_path in paths_to_images:
         image = cv.imread(im_path)
         image = cv.pyrDown(image)
+        #wyświetlenie na konsolę postępu
+        print(f'Progress: {paths_to_images.index(im_path)}/{len(paths_to_images)}')
         print(f'Acctual file: {im_path.split('\\')[-1]}')
-        mask = findTreeTrunk(image)
+        mask = findTreeTrunk(image) #maska
+        #zastosowanie maski do oryginalnego obrazu
+        tree_trunk_image = image*mask[:,:,np.newaxis] 
 
-        #wyświetlenie obrazów
-        cv.imshow('Oryginal Image', image)
-        cv.imshow('Mask', np.where(mask == 1, 255, 0).astype('uint8'))
-        tree_trunk_image = image*mask[:,:,np.newaxis]
-        cv.imshow('Tree trunk', tree_trunk_image)
+        save_output = True
+        if save_output == True:
+            output_file_name = 'masked-' + im_path.split('\\')[-1]
+            output_diectory = ('output_fils\\tree_trunks\\' +
+                im_path.split('\\')[-2]) + '\\'
+            cv.imwrite(output_diectory+output_file_name, tree_trunk_image)
+        
+        #wyświetlenie obrazów,     
+        show_results = False
+        if show_results == True:
+            cv.imshow('Oryginal Image', image)
+            cv.imshow('Mask', np.where(mask == 1, 255, 0).astype('uint8'))
+            cv.imshow('Tree trunk', tree_trunk_image)
 
-        key = cv.waitKey(0)
-        if key == ord('Q') or key == ord('q') or key == 27:
-            exit()
+            key = cv.waitKey(0)
+            if key == ord('Q') or key == ord('q') or key == 27:
+                exit()
 
 if __name__ == '__main__':
     main()
