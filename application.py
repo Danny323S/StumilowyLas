@@ -1,14 +1,17 @@
 import cv2 as cv
 import numpy as np
 import os
-# import tensorflow as tf
+import argparse
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+import tensorflow as tf
 
 import utilities as utils
 
-def main():
+def app(path_to_image: str) -> None:
     # wczytanie obrazu
-    print('\n__start__')
-    image_direcotry = '.\\drzewka\\sosna_1.jpg'
+    print('\n__start__\n')
+    image_direcotry = path_to_image
 
     if not os.path.isfile(image_direcotry):
         print(f'File {image_direcotry} does not exist.')
@@ -28,15 +31,34 @@ def main():
     tree_trunk = tree_trunk[:, min(set(np.where(tree_trunk != 0)[1])):max(set(np.where(tree_trunk != 0)[1]))]
     
     # sampling
+    samples = utils.sampling(tree_trunk)
+    print(f'number of acquired samples: {len(samples)}')
+    samples = np.array(samples) # przekształcenie listy na tablicę npumy
 
     # wczytanie modelu
+    model_direcotry = '.\\saved models\\model.keras'
+    model = tf.keras.models.load_model(model_direcotry)
 
     # predict
+    predictions = model.predict(samples)
 
     # prezentacja wyników 
+    oak_predisciotn = 0; pine_prediction = 0 
+    for prediction in predictions:
+        if prediction[0] >= prediction[1]:
+            oak_predisciotn += 1
+        else:
+            pine_prediction += 1
+    print(f'{oak_predisciotn}/{len(samples)} samples classified as oak')
+    print(f'{pine_prediction}/{len(samples)} samples classified as pine')
+    if oak_predisciotn >= pine_prediction:
+        print('\nFINAL RESULT: \033[35mOAK\033[0m')
+    else:
+        print('\nFINAL RESULT: \033[35mPINE\033[0m')
+
 
     # wyświetlanie poszczególnych etapów początkowego przetwarzania obrazu
-    show_images: bool = True
+    show_images: bool = False
     if show_images == True:
         while True:
             cv.imshow('Input Image', tree_image)
@@ -47,7 +69,21 @@ def main():
                 cv.destroyAllWindows()
                 break
 
-    print('__end__\n')
+    print('\n__end__\n')
+
+def file_path(path: str) -> str:
+    if os.path.isfile(path):
+        if path.split('.')[-1] == 'jpg':
+            return path
+    raise argparse.ArgumentError(f'Invalid file: {path}')
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('path', type=file_path)
+    args = parser.parse_args()
+    path_to_image = args.path
+
+    app(path_to_image)    
 
 if __name__ == '__main__':
     main()

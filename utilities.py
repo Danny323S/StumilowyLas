@@ -1,7 +1,6 @@
 import cv2 as cv
 import numpy as np
 import os
-
 from cv2 import UMat
 def find_tree_trunk(src_image: UMat) -> UMat: 
     '''funkcja zwracająca obszar na którym znajduje się pień drzewa'''
@@ -71,7 +70,19 @@ def crop_mask(oryginal_mask: UMat) -> UMat:
     output_mask[:, right_columne_index:left_columne_index+1] = 255
     return output_mask
 
-def crop_tree(src_image, mask):
-    x, y, w, h = cv.boundingRect(mask)
-    final = src_image[y:y+h, x:x+w]
-    return final
+def sampling(image: UMat) -> list[UMat]:
+    samples_list = [] # list for function to return
+    sample_size = 50
+    offset = 30
+    x, y = 0, 0
+    n= 0 
+    while x+sample_size < image.shape[1]:
+        while y+sample_size < image.shape[0]:
+            sample = image[y:y+sample_size, x:x+sample_size]
+            samples_list.append(sample)
+            n+=1
+            y+=offset
+        y = 0
+        x+=offset
+
+    return samples_list
