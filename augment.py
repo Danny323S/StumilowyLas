@@ -5,6 +5,9 @@ import numpy as np
 import random
 import cv2 as cv
 import tensorflow as tf
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 def get_model(disp_summary=0):
     #Tworzenie modelu
@@ -46,16 +49,31 @@ def load_data(folder_dir: str) -> list[np.array] | list[int]:
 
     return images_list, labels
 
+def show_confussion_matrix(path_to_model, test_images, test_labels):
+    model = tf.keras.models.load_model(path_to_model)
+
+    test_images = np.stack(test_images)
+    test_labels = np.array(test_labels)
+
+
+    test_predicted_labels_probs = model.predict(test_images)
+    test_predicted_labels = np.argmax(test_predicted_labels_probs, axis=1)
+
+    #Tablica błędu
+    cm = confusion_matrix(test_labels, test_predicted_labels)
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=[0, 1])
+    disp.plot()
+    plt.show()
 
 def left_right_augmentation(input_images: list[np.array], num_to_augment) -> list[np.array]:
     flipped =[]
     random.shuffle(input_images)
     for i in range(num_to_augment):
-        cv.imshow("przed",input_images[i])
+        # cv.imshow("przed",input_images[i])
         flipped.append(np.fliplr(input_images[i]))
-        cv.imshow("po",flipped[i])
-        cv.waitKey(0)
-    cv.destroyAllWindows()
+    #     cv.imshow("po",flipped[i])
+    #     cv.waitKey(0)
+    # cv.destroyAllWindows()
     return flipped
 
 def save_flipped(images: list[np.array], path:str):
@@ -64,10 +82,24 @@ def save_flipped(images: list[np.array], path:str):
         # print(filepath)
         cv.imwrite(filepath, images[i])
 
+def train(model, training_images, training_labels, test_images, test_labels, file_name, save = True):
+    model.fit(np.array(training_images), np.array(training_labels), epochs=5)
+    test_loss, test_accuracy = model.evaluate(np.array(test_images), np.array(test_labels))
+    print ('\n Validation results:\naccuracy: {}%,  loss: {}'.format(test_accuracy*100, test_loss))
+
+
+    # zapis modelu
+    if save == True:
+        target_folder = 'saved models'
+        file_name = file_name
+        extension = 'keras'
+        path = f'{target_folder}\\{file_name}.{extension}'
+        print(f'saving model to: {path}')
+        model.save(path)
         
 def main():
     # pobranie modelu sieci cnn
-    # model = get_model(disp_summary=1)
+    model = get_model(disp_summary=1)
     # print(f'model type: {type(model)}')
 
     # wczytanie danych do uczenia sieci
@@ -87,52 +119,46 @@ def main():
 
     # # Zliczenie ile danych trzeba dorobić żeby zbiory były równe
 
-    num_augm_dab_train = len(sosna_train_images)-len(dab_train_images)
-    num_augm_dab_test = len(sosna_test_images)-len(dab_test_images)
-    print("Do treningowego " + str(num_augm_dab_train))
-    print("Do testowego " + str(num_augm_dab_test))
+    # num_augm_dab_train = len(sosna_train_images)-len(dab_train_images)
+    # num_augm_dab_test = len(sosna_test_images)-len(dab_test_images)
+    # print("Do treningowego " + str(num_augm_dab_train))
+    # print("Do testowego " + str(num_augm_dab_test))
 
-    # Lustrzane odbicia w pionie
-    flipped_dab_train = left_right_augmentation(dab_train_images, num_augm_dab_train)
-    flipped_dab_test = left_right_augmentation(dab_test_images, num_augm_dab_test)
-    print(len(flipped_dab_test))
+    # # Lustrzane odbicia w pionie
+    # flipped_dab_train = left_right_augmentation(dab_train_images, num_augm_dab_train)
+    # flipped_dab_test = left_right_augmentation(dab_test_images, num_augm_dab_test)
+    # print(len(flipped_dab_test))
 
     path_augmented_train = rf'C:\Users\niepo\OneDrive\Dokumenty\GitHub\StumilowyLas\samples\data\augmented\train'
-    path_augmented_test = rf'C:\Users\niepo\OneDrive\Dokumenty\GitHub\StumilowyLas\samples\data\augmented\val_test'
+    # path_augmented_test = rf'C:\Users\niepo\OneDrive\Dokumenty\GitHub\StumilowyLas\samples\data\augmented\val_test'
     # save_flipped(flipped_dab_train, path_augmented_train)
     # save_flipped(flipped_dab_test, path_augmented_test)
 
     #załadowanie augmentowanych danych
-    # dab_augm_train_images, dab_augm_train_labels = load_data(path_augmented_train)
+    dab_augm_train_images, dab_augm_train_labels = load_data(path_augmented_train)
     # dab_augm_test_images, dab_augm_test_labels = load_data(path_augmented_test)
 
     # Tutaj łączę dęby i sosny w dwa zbiory, terningowe i testowe.
     # następnie mieszam te  zbiory tak tak aby w zbiorze dane nie były uporządkowane,
     # czyli aby w zbiorach nie były najpierw same dęby a później same sosny (nie wiem czy jest to konieczne)
-    # training_data = list(zip(dab_train_images + dab_augm_train_images+ sosna_train_images, dab_train_labels +dab_augm_train_labels+ sosna_train_labels))
-    # random.shuffle(training_data)
-    # training_images, training_labels = zip(*training_data)
-    # training_images, training_labels = list(training_images), list(training_labels)
+    training_data = list(zip(dab_train_images + dab_augm_train_images+ sosna_train_images, dab_train_labels +dab_augm_train_labels+ sosna_train_labels))
+    random.shuffle(training_data)
+    training_images, training_labels = zip(*training_data)
+    training_images, training_labels = list(training_images), list(training_labels)
 
-    # test_data = list(zip(dab_test_images + dab_augm_test_images + sosna_test_images, dab_test_labels + dab_augm_test_labels + sosna_test_labels))
-    # random.shuffle(test_data)
-    # test_images, test_labels = zip(*test_data)
-    # test_images, test_labels = list(test_images), list(test_labels)
-    # print('Loading data finished')
+    test_data = list(zip(dab_test_images + sosna_test_images, dab_test_labels + sosna_test_labels))
+    random.shuffle(test_data)
+    test_images, test_labels = zip(*test_data)
+    test_images, test_labels = list(test_images), list(test_labels)
+    print('Loading data finished')
 
-    # model.fit(np.array(training_images), np.array(training_labels), epochs=10)
-    # test_loss, test_accuracy = model.evaluate(np.array(test_images), np.array(test_labels))
-    # print ('\n Validation results:\naccuracy: {}%,  loss: {}'.format(test_accuracy*100, test_loss))
-
-    # zapis modelu
-    save = False
-    if save == True:
-        target_folder = 'saved models'
-        file_name = 'model_10epochs'
-        extension = 'keras'
-        path = f'{target_folder}\\{file_name}.{extension}'
-        print(f'saving model to: {path}')
-        model.save(path)
+    #uczenie modelu:
+    # train(model, training_images, training_labels, test_images, test_labels, 'new_model', True)
+    
+    #macierz błędu do modelu
+    #model_path = '.\\saved models\\new_model.keras'
+    model_path = '.\\saved models\\model2.keras'
+    show_confussion_matrix(model_path, test_images, test_labels)
 
 if __name__ == '__main__':
     main()
